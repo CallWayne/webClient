@@ -7,30 +7,39 @@
     android:paddingLeft="@dimen/activity_horizontal_margin"
     android:paddingRight="@dimen/activity_horizontal_margin"
     android:paddingTop="@dimen/activity_vertical_margin"
-    tools:context="team8.webclient.MainActivity">
+    tools:context="team8.webclient.SignupActivity">
 
-    <Button
+    <EditText
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Send Message!"
-        android:id="@+id/button_send"
+        android:id="@+id/editText_signup"
         android:layout_alignParentTop="true"
-        android:layout_centerHorizontal="true" />
+        android:layout_centerHorizontal="true"
+        android:hint="New Username please..."/>
 
     <Button
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Receive Message!"
-        android:id="@+id/button_receive"
-        android:layout_below="@+id/button_send"
-        android:layout_centerHorizontal="true" />
+        android:text="Signup!"
+        android:id="@+id/button_signup"
+        android:layout_below="@+id/editText_password"
+        android:layout_alignParentStart="true" />
+
+    <EditText
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:inputType="textPassword"
+        android:ems="10"
+        android:id="@+id/editText_password"
+        android:layout_below="@+id/editText_signup"
+        android:layout_centerHorizontal="true"
+        android:hint="New Password please..."/>
 
     <Button
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="DELETE ACCOUNT"
-        android:id="@+id/button_delete"
+        android:text="Login?"
+        android:id="@+id/button_tologin"
         android:layout_alignParentBottom="true"
         android:layout_centerHorizontal="true" />
-
 </RelativeLayout>
