@@ -10,6 +10,9 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.security.Key;
+import java.security.spec.KeySpec;
+
 import org.apache.http.HttpResponse;
 import org.apache.http.client.HttpClient;
 import org.apache.http.client.methods.HttpGet;
@@ -26,10 +29,15 @@ import android.widget.TextView;
 import android.widget.Toast;
 import android.app.Activity;
 
+import javax.crypto.Cipher;
+import javax.crypto.SecretKey;
+import javax.crypto.SecretKeyFactory;
+import javax.crypto.spec.PBEKeySpec;
 
 
 public class LoginActivity extends AppCompatActivity {
     EditText login;
+    EditText password;
     String username;
     Button btn_login;
     Button btn_tosignup;
@@ -41,6 +49,7 @@ public class LoginActivity extends AppCompatActivity {
         setContentView(R.layout.activity_login);
 
         login = (EditText) findViewById(R.id.editText_login);
+        password = (EditText) findViewById(R.id.editText_loginPassword);
         username = String.valueOf(login.getText());
         answer = (TextView) findViewById(R.id.textView_login);
         btn_login = (Button) findViewById(R.id.button_login);
@@ -49,6 +58,8 @@ public class LoginActivity extends AppCompatActivity {
             @Override
             public void onClick(View v){
                 if(login != null) {
+                    Storage.setUsername(login.getText().toString());
+                    Storage.setPassword(password.getText().toString());
                     HttpAsyncTask httpAsyncTask = new HttpAsyncTask();
                     httpAsyncTask.execute("http://10.0.2.2:3000/"+login.getText());
                 }
@@ -65,6 +76,7 @@ public class LoginActivity extends AppCompatActivity {
     }
 
     public static String GET(String url){
+        char[] c_arr = Storage.getPassword().toCharArray();
         InputStream inputStream = null;
         String result = "";
         try {
@@ -79,8 +91,30 @@ public class LoginActivity extends AppCompatActivity {
             inputStream = httpResponse.getEntity().getContent();
 
             // convert inputstream to string
-            if(inputStream != null)
+            if(inputStream != null) {
                 result = convertInputStreamToString(inputStream);
+
+                //JSonObject Reader erstellen und die Daten extrahieren
+                JSONObject reader = new JSONObject(result);
+                String salt_masterkeyString = reader.getString("salt_masterkey");
+                String privkey_user_encString = reader.getString("privkey_user_enc");
+                String pubkey_userString = reader.getString("pubkey_user");
+                byte[] salt_masterkey = salt_masterkeyString.getBytes();
+                byte[] privkey_user_enc = privkey_user_encString.getBytes();
+                byte[] pubkey_user = pubkey_userString.getBytes();
+
+                //masterkey bilden
+                SecretKeyFactory secretKeyFactory = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA1");
+                KeySpec keySpec = new PBEKeySpec(c_arr, salt_masterkey, 1000, 256);
+                SecretKey masterkey = secretKeyFactory.generateSecret(keySpec);
+
+                Cipher cipher = Cipher.getInstance("AES/ECB/PKCS5Padding");
+                cipher.init(Cipher.WRAP_MODE, masterkey);
+                //Fehler Login
+                Key privkey_user_key = cipher.unwrap(privkey_user_enc, "AES", Cipher.SECRET_KEY);
+                byte[] privkey_user = privkey_user_key.getEncoded();
+                Storage.setPrivkey(privkey_user);
+            }
             else
                 result = "Did not work!";
 
@@ -111,8 +145,8 @@ public class LoginActivity extends AppCompatActivity {
             @Override
             protected void onPostExecute(String result) {
 
-                if(result.equals("400")){
-                    Toast.makeText(getBaseContext(), "Bad Request 400!", Toast.LENGTH_LONG).show();
+                if(result.equals("")){
+                    Toast.makeText(getBaseContext(), "The user don't exists, please signup!", Toast.LENGTH_LONG).show();
                 }
                 else{
                     Toast.makeText(getBaseContext(), "Received!", Toast.LENGTH_LONG).show();

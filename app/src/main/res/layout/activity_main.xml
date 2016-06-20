@@ -14,16 +14,17 @@
         android:layout_height="wrap_content"
         android:text="Send Message!"
         android:id="@+id/button_send"
-        android:layout_alignParentTop="true"
-        android:layout_centerHorizontal="true" />
+        android:layout_above="@+id/editText_receive"
+        android:layout_alignParentStart="true" />
 
     <Button
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:text="Receive Message!"
         android:id="@+id/button_receive"
-        android:layout_below="@+id/button_send"
-        android:layout_centerHorizontal="true" />
+        android:layout_alignBaseline="@+id/button_delete"
+        android:layout_alignBottom="@+id/button_delete"
+        android:layout_alignParentEnd="true" />
 
     <Button
         android:layout_width="match_parent"
@@ -32,5 +33,45 @@
         android:id="@+id/button_delete"
         android:layout_alignParentBottom="true"
         android:layout_centerHorizontal="true" />
+
+    <EditText
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:id="@+id/editText_deleteAccount"
+        android:hint="Please type in your Username!"
+        android:layout_above="@+id/button_delete"
+        android:layout_centerHorizontal="true" />
+
+    <EditText
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:id="@+id/editText_receive"
+        android:hint="Please type in your Username!"
+        android:layout_above="@+id/button_receive"
+        android:layout_centerHorizontal="true" />
+
+    <EditText
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:id="@+id/editText_send_Msg"
+        android:hint="Please typ in your message!"
+        android:layout_above="@+id/button_send"
+        android:layout_alignParentStart="true" />
+
+    <EditText
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:id="@+id/editText_sendUsername"
+        android:hint="Please type in your username!"
+        android:layout_alignParentTop="true"
+        android:layout_alignParentStart="true" />
+
+    <EditText
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:id="@+id/editText_sendRecipient"
+        android:layout_below="@+id/editText_sendUsername"
+        android:layout_centerHorizontal="true"
+        android:hint="Please type in the recipient!" />
 
 </RelativeLayout>

@@ -111,7 +111,6 @@ public class SignupActivity extends AppCompatActivity {
             byte[] privateKeyByte = privkey_user.getEncoded();
             byte[] publicKeyByte = pubkey_user.getEncoded();
             String pubKeyStr = new String(Base64.encode(publicKeyByte, 0));
-            String privKeyStr = new String(Base64.encode(privateKeyByte, 0));
 
             //privkey_user zu privkey_user_enc verschlüsseln
             Cipher cipher = Cipher.getInstance("AES/ECB/PKCS5Padding");
