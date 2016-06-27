@@ -3,6 +3,7 @@ package team8.webclient;
 import android.content.Intent;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.util.Base64;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
@@ -33,6 +34,7 @@ import javax.crypto.Cipher;
 import javax.crypto.SecretKey;
 import javax.crypto.SecretKeyFactory;
 import javax.crypto.spec.PBEKeySpec;
+import javax.crypto.spec.SecretKeySpec;
 
 
 public class LoginActivity extends AppCompatActivity {
@@ -76,7 +78,7 @@ public class LoginActivity extends AppCompatActivity {
     }
 
     public static String GET(String url){
-        char[] c_arr = Storage.getPassword().toCharArray();
+        char[] password = Storage.getPassword().toCharArray();
         InputStream inputStream = null;
         String result = "";
         try {
@@ -99,21 +101,26 @@ public class LoginActivity extends AppCompatActivity {
                 String salt_masterkeyString = reader.getString("salt_masterkey");
                 String privkey_user_encString = reader.getString("privkey_user_enc");
                 String pubkey_userString = reader.getString("pubkey_user");
-                byte[] salt_masterkey = salt_masterkeyString.getBytes();
+                byte[] salt_masterkey = salt_masterkeyString.getBytes("UTF-8");
                 byte[] privkey_user_enc = privkey_user_encString.getBytes();
+                String privkey_user_encStr = new String(privkey_user_enc, "UTF-8");
                 byte[] pubkey_user = pubkey_userString.getBytes();
 
-                //masterkey bilden
-                SecretKeyFactory secretKeyFactory = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA1");
-                KeySpec keySpec = new PBEKeySpec(c_arr, salt_masterkey, 1000, 256);
-                SecretKey masterkey = secretKeyFactory.generateSecret(keySpec);
+                SecretKeyFactory kf = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA1");
+                KeySpec specs = new PBEKeySpec(password, salt_masterkey, 10000, 256);
+                SecretKey key = kf.generateSecret(specs);
+                byte[] masterkey = key.getEncoded();
 
+                SecretKey masterkey_enc = new SecretKeySpec(masterkey, 0, masterkey.length, "AES");
+
+                byte[] privkey_user_encByte = android.util.Base64.decode(privkey_user_encStr, android.util.Base64.DEFAULT);
+                byte[] decrypted = null;
                 Cipher cipher = Cipher.getInstance("AES/ECB/PKCS5Padding");
-                cipher.init(Cipher.WRAP_MODE, masterkey);
-                //Fehler Login
-                Key privkey_user_key = cipher.unwrap(privkey_user_enc, "AES", Cipher.SECRET_KEY);
-                byte[] privkey_user = privkey_user_key.getEncoded();
-                Storage.setPrivkey(privkey_user);
+                cipher.init(Cipher.DECRYPT_MODE, masterkey_enc);
+                decrypted = cipher.doFinal(privkey_user_encByte);
+
+                Storage.setPrivkey(decrypted);
+
             }
             else
                 result = "Did not work!";
@@ -152,7 +159,6 @@ public class LoginActivity extends AppCompatActivity {
                     Toast.makeText(getBaseContext(), "Received!", Toast.LENGTH_LONG).show();
                     answer.setText(result);
                     Intent intent = new Intent(getBaseContext(), MainActivity.class);
-                    intent.putExtra("username", login.getText());
                     startActivity(intent);
                 }
             }

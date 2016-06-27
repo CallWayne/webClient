@@ -25,11 +25,11 @@ import java.security.KeyPair;
 import java.security.KeyPairGenerator;
 import java.security.SecureRandom;
 import java.security.spec.KeySpec;
-import java.util.Random;
 import javax.crypto.Cipher;
 import javax.crypto.SecretKey;
 import javax.crypto.SecretKeyFactory;
 import javax.crypto.spec.PBEKeySpec;
+import javax.crypto.spec.*;
 
 
 public class SignupActivity extends AppCompatActivity {
@@ -85,53 +85,50 @@ public class SignupActivity extends AppCompatActivity {
             String json = "";
 
             //salt_masterkey bilden
-            byte[] salt_masterkey = SecureRandom.getSeed(64);
+            SecureRandom sr = SecureRandom.getInstance("SHA1PRNG");
+            byte[] salt = new byte[64];
+            sr.nextBytes(salt);
+            byte[] salt_masterkey = salt;
+            String saltString = new String(salt_masterkey, "UTF-8");
+            byte[] salt_masterkey1 = saltString.getBytes("UTF-8");
 
-            //Aufruf PBKDF2 Funktion um masterkey aus password und salt_masterkey zu bilden
-            SecretKeyFactory secretKeyFactory = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA1");
-            KeySpec keySpec = new PBEKeySpec(password, salt_masterkey, 1000, 256);
-            SecretKey masterkey = secretKeyFactory.generateSecret(keySpec);
+            SecretKeyFactory kf = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA1");
+            KeySpec specs = new PBEKeySpec(password, salt_masterkey1, 10000, 256);
+            SecretKey key = kf.generateSecret(specs);
+            byte[] masterkey = key.getEncoded();
 
             //KeyPair bilden
             KeyPairGenerator kpg = null;
 
             //KeyPairGenerator erzeugen --> Algorithmus: RSA 2048
             kpg = KeyPairGenerator.getInstance("RSA");
-            SecureRandom securerandom = new SecureRandom();
-            byte bytes[] = new byte[20];
-            securerandom.nextBytes(bytes);
-            kpg.initialize(2048, securerandom);
-
-            //KeyPair erzeugen
+            kpg.initialize(2048);
             KeyPair kp = kpg.genKeyPair();
+            Key publicKey = kp.getPublic();
+            Key privateKey = kp.getPrivate();
+            System.out.println(privateKey.toString());
 
-            //publickey und privatekey in Variablen speichern
-            Key pubkey_user = kp.getPublic();
-            Key privkey_user = kp.getPrivate();
-            byte[] privateKeyByte = privkey_user.getEncoded();
-            byte[] publicKeyByte = pubkey_user.getEncoded();
-            String pubKeyStr = new String(Base64.encode(publicKeyByte, 0));
-
-            //privkey_user zu privkey_user_enc verschlüsseln
+            //generate privkey_user_enc
+            SecretKey masterkey_enc = new SecretKeySpec(masterkey, 0, masterkey.length, "AES");
+            byte[] encrypted = null;
             Cipher cipher = Cipher.getInstance("AES/ECB/PKCS5Padding");
-            cipher.init(Cipher.WRAP_MODE,masterkey);
-            byte[] privkey_user_enc = cipher.wrap(privkey_user);
+            cipher.init(Cipher.ENCRYPT_MODE, masterkey_enc);
+            encrypted = cipher.doFinal(privateKey.getEncoded());
+
+            String privkeyGeheim = android.util.Base64.encodeToString(encrypted, android.util.Base64.DEFAULT);
 
 
             // 3. build jsonObject
             JSONObject jsonObject = new JSONObject();
-            jsonObject.accumulate("username", username);
+            jsonObject.accumulate("login", username);
             jsonObject.accumulate("salt_masterkey", salt_masterkey);
-            jsonObject.accumulate("pubkey_user", pubKeyStr);
-            jsonObject.accumulate("privkey_user_enc", privkey_user_enc);
+            jsonObject.accumulate("pubkey_user", publicKey.toString());
+            jsonObject.accumulate("privkey_user_enc", privkeyGeheim);
 
 
             // 4. convert JSONObject to JSON to String
             json = jsonObject.toString();
 
-            // ** Alternative way to convert Person object to JSON string usin Jackson Lib
-            // ObjectMapper mapper = new ObjectMapper();
-            // json = mapper.writeValueAsString(person);
 
             // 5. set json to StringEntity
             StringEntity se = new StringEntity(json);
@@ -169,7 +166,6 @@ public class SignupActivity extends AppCompatActivity {
         String result = "";
         while((line = bufferedReader.readLine()) != null)
             result += line;
-
         inputStream.close();
         return result;
 
@@ -178,8 +174,6 @@ public class SignupActivity extends AppCompatActivity {
     private class HttpAsyncTask extends AsyncTask<String, Void, String> {
         @Override
         protected String doInBackground(String... params) {
-            String url = params[0];
-            String username = params[0];
             String password = params[2];
             char[] c_arr = password.toCharArray();
             return POST(params[0], params[1], c_arr);
