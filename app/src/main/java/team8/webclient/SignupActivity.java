@@ -1,6 +1,7 @@
 package team8.webclient;
 
 import android.content.Intent;
+import android.net.Uri;
 import android.os.AsyncTask;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
@@ -10,6 +11,11 @@ import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.Toast;
+
+import com.google.android.gms.appindexing.Action;
+import com.google.android.gms.appindexing.AppIndex;
+import com.google.android.gms.common.api.GoogleApiClient;
+
 import org.apache.http.HttpResponse;
 import org.apache.http.client.HttpClient;
 import org.apache.http.client.methods.HttpPost;
@@ -20,9 +26,13 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.io.StringWriter;
+import java.nio.charset.StandardCharsets;
 import java.security.Key;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
+import java.security.PrivateKey;
+import java.security.PublicKey;
 import java.security.SecureRandom;
 import java.security.spec.KeySpec;
 import javax.crypto.Cipher;
@@ -30,6 +40,21 @@ import javax.crypto.SecretKey;
 import javax.crypto.SecretKeyFactory;
 import javax.crypto.spec.PBEKeySpec;
 import javax.crypto.spec.*;
+import org.spongycastle.crypto.PBEParametersGenerator;
+import org.spongycastle.crypto.digests.SHA256Digest;
+import org.spongycastle.crypto.generators.PKCS5S2ParametersGenerator;
+import org.spongycastle.crypto.params.KeyParameter;
+import org.spongycastle.openssl.jcajce.JcaPEMWriter;
+
+import java.io.StringWriter;
+import java.security.*;
+import java.util.HashMap;
+import java.util.Map;
+
+import javax.crypto.Cipher;
+import javax.crypto.SecretKeyFactory;
+import javax.crypto.spec.PBEKeySpec;
+import javax.crypto.spec.SecretKeySpec;
 
 
 public class SignupActivity extends AppCompatActivity {
@@ -40,6 +65,11 @@ public class SignupActivity extends AppCompatActivity {
     String passwordString;
     Button btn_tologin;
     String url;
+    /**
+     * ATTENTION: This was auto-generated to implement the App Indexing API.
+     * See https://g.co/AppIndexing/AndroidStudio for more information.
+     */
+    private GoogleApiClient client;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -49,12 +79,12 @@ public class SignupActivity extends AppCompatActivity {
         password = (EditText) findViewById(R.id.editText_password);
         btn_signup = (Button) findViewById(R.id.button_signup);
         btn_tologin = (Button) findViewById(R.id.button_tologin);
-        btn_signup.setOnClickListener(new View.OnClickListener(){
+        btn_signup.setOnClickListener(new View.OnClickListener() {
             @Override
-            public void onClick(View v){
-                if(signup != null) {
+            public void onClick(View v) {
+                if (signup != null) {
                     HttpAsyncTask httpAsyncTask = new HttpAsyncTask();
-                    url = "http://10.0.2.2:3000/"+signup.getText().toString();
+                    url = "http://10.0.2.2:3000/" + signup.getText().toString();
                     username = signup.getText().toString();
                     passwordString = password.getText().toString();
                     httpAsyncTask.execute(url, username, passwordString);
@@ -62,18 +92,23 @@ public class SignupActivity extends AppCompatActivity {
 
             }
         });
-        btn_tologin.setOnClickListener(new View.OnClickListener(){
+        btn_tologin.setOnClickListener(new View.OnClickListener() {
             @Override
-            public void onClick(View v){
+            public void onClick(View v) {
                 Intent intent = new Intent(getBaseContext(), LoginActivity.class);
                 startActivity(intent);
             }
         });
+        // ATTENTION: This was auto-generated to implement the App Indexing API.
+        // See https://g.co/AppIndexing/AndroidStudio for more information.
+        client = new GoogleApiClient.Builder(this).addApi(AppIndex.API).build();
     }
 
-    public static String POST(String url, String username, char[] password){
+    public static String POST(String url, String username, char[] password) {
         InputStream inputStream = null;
         String result = "";
+        char[] PASSWORD = password;
+        int iterations = 10000;
         try {
 
             // 1. create HttpClient
@@ -85,15 +120,13 @@ public class SignupActivity extends AppCompatActivity {
             String json = "";
 
             //salt_masterkey bilden
-            SecureRandom sr = SecureRandom.getInstance("SHA1PRNG");
-            byte[] salt = new byte[64];
-            sr.nextBytes(salt);
-            byte[] salt_masterkey = salt;
-            String saltString = new String(salt_masterkey, "UTF-8");
-            byte[] salt_masterkey1 = saltString.getBytes("UTF-8");
+
+            byte[] salt_masterkey = SecureRandom.getSeed(64);
+            Storage.setSalt(salt_masterkey);
+            String saltString = new String(salt_masterkey, StandardCharsets.UTF_8);
 
             SecretKeyFactory kf = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA1");
-            KeySpec specs = new PBEKeySpec(password, salt_masterkey1, 10000, 256);
+            KeySpec specs = new PBEKeySpec(password, salt_masterkey, 10000, 256);
             SecretKey key = kf.generateSecret(specs);
             byte[] masterkey = key.getEncoded();
 
@@ -106,23 +139,22 @@ public class SignupActivity extends AppCompatActivity {
             KeyPair kp = kpg.genKeyPair();
             Key publicKey = kp.getPublic();
             Key privateKey = kp.getPrivate();
-            System.out.println(privateKey.toString());
 
             //generate privkey_user_enc
             SecretKey masterkey_enc = new SecretKeySpec(masterkey, 0, masterkey.length, "AES");
-            byte[] encrypted = null;
             Cipher cipher = Cipher.getInstance("AES/ECB/PKCS5Padding");
             cipher.init(Cipher.ENCRYPT_MODE, masterkey_enc);
-            encrypted = cipher.doFinal(privateKey.getEncoded());
+            byte [] privkey_user_enc = cipher.doFinal(privateKey.getEncoded());
+            byte [] encrypted =  Base64.encode(privkey_user_enc, Base64.DEFAULT);
 
-            String privkeyGeheim = android.util.Base64.encodeToString(encrypted, android.util.Base64.DEFAULT);
+            String privkeyGeheim = new String(encrypted, StandardCharsets.UTF_8);
 
 
             // 3. build jsonObject
             JSONObject jsonObject = new JSONObject();
             jsonObject.accumulate("login", username);
-            jsonObject.accumulate("salt_masterkey", salt_masterkey);
-            jsonObject.accumulate("pubkey_user", publicKey.toString());
+            jsonObject.accumulate("salt_masterkey", saltString);
+            jsonObject.accumulate("pubkey_user", publicKey);
             jsonObject.accumulate("privkey_user_enc", privkeyGeheim);
 
 
@@ -147,7 +179,7 @@ public class SignupActivity extends AppCompatActivity {
             inputStream = httpResponse.getEntity().getContent();
 
             // 10. convert inputstream to string
-            if(inputStream != null)
+            if (inputStream != null)
                 result = convertInputStreamToString(inputStream);
             else
                 result = "Did not work!";
@@ -160,15 +192,55 @@ public class SignupActivity extends AppCompatActivity {
         return result;
     }
 
-    private static String convertInputStreamToString(InputStream inputStream) throws IOException{
-        BufferedReader bufferedReader = new BufferedReader( new InputStreamReader(inputStream));
+    private static String convertInputStreamToString(InputStream inputStream) throws IOException {
+        BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(inputStream));
         String line = "";
         String result = "";
-        while((line = bufferedReader.readLine()) != null)
+        while ((line = bufferedReader.readLine()) != null)
             result += line;
         inputStream.close();
         return result;
 
+    }
+
+    @Override
+    public void onStart() {
+        super.onStart();
+
+        // ATTENTION: This was auto-generated to implement the App Indexing API.
+        // See https://g.co/AppIndexing/AndroidStudio for more information.
+        client.connect();
+        Action viewAction = Action.newAction(
+                Action.TYPE_VIEW, // TODO: choose an action type.
+                "Signup Page", // TODO: Define a title for the content shown.
+                // TODO: If you have web page content that matches this app activity's content,
+                // make sure this auto-generated web page URL is correct.
+                // Otherwise, set the URL to null.
+                Uri.parse("http://host/path"),
+                // TODO: Make sure this auto-generated app URL is correct.
+                Uri.parse("android-app://team8.webclient/http/host/path")
+        );
+        AppIndex.AppIndexApi.start(client, viewAction);
+    }
+
+    @Override
+    public void onStop() {
+        super.onStop();
+
+        // ATTENTION: This was auto-generated to implement the App Indexing API.
+        // See https://g.co/AppIndexing/AndroidStudio for more information.
+        Action viewAction = Action.newAction(
+                Action.TYPE_VIEW, // TODO: choose an action type.
+                "Signup Page", // TODO: Define a title for the content shown.
+                // TODO: If you have web page content that matches this app activity's content,
+                // make sure this auto-generated web page URL is correct.
+                // Otherwise, set the URL to null.
+                Uri.parse("http://host/path"),
+                // TODO: Make sure this auto-generated app URL is correct.
+                Uri.parse("android-app://team8.webclient/http/host/path")
+        );
+        AppIndex.AppIndexApi.end(client, viewAction);
+        client.disconnect();
     }
 
     private class HttpAsyncTask extends AsyncTask<String, Void, String> {
@@ -178,6 +250,7 @@ public class SignupActivity extends AppCompatActivity {
             char[] c_arr = password.toCharArray();
             return POST(params[0], params[1], c_arr);
         }
+
         // onPostExecute displays the results of the AsyncTask.
         @Override
         protected void onPostExecute(String result) {

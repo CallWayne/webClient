@@ -11,6 +11,7 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
 import java.security.Key;
 import java.security.spec.KeySpec;
 
@@ -101,12 +102,12 @@ public class LoginActivity extends AppCompatActivity {
                 String salt_masterkeyString = reader.getString("salt_masterkey");
                 String privkey_user_encString = reader.getString("privkey_user_enc");
                 String pubkey_userString = reader.getString("pubkey_user");
-                byte[] salt_masterkey = salt_masterkeyString.getBytes("UTF-8");
+                byte[] salt_masterkey = Storage.getSalt();
                 byte[] privkey_user_enc = privkey_user_encString.getBytes();
-                String privkey_user_encStr = new String(privkey_user_enc, "UTF-8");
+                String privkey_user_encStr = new String(privkey_user_enc, StandardCharsets.UTF_8);
                 byte[] pubkey_user = pubkey_userString.getBytes();
 
-                SecretKeyFactory kf = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA1");
+                /*SecretKeyFactory kf = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA1");
                 KeySpec specs = new PBEKeySpec(password, salt_masterkey, 10000, 256);
                 SecretKey key = kf.generateSecret(specs);
                 byte[] masterkey = key.getEncoded();
@@ -118,8 +119,20 @@ public class LoginActivity extends AppCompatActivity {
                 Cipher cipher = Cipher.getInstance("AES/ECB/PKCS5Padding");
                 cipher.init(Cipher.DECRYPT_MODE, masterkey_enc);
                 decrypted = cipher.doFinal(privkey_user_encByte);
+*/
+                SecretKeyFactory kf = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA1");
+                KeySpec specs = new PBEKeySpec(password, salt_masterkey, 10000, 256);
+                SecretKey key = kf.generateSecret(specs);
+                byte[] masterkey = key.getEncoded();
 
-                Storage.setPrivkey(decrypted);
+                SecretKey masterkey_enc = new SecretKeySpec(masterkey, 0, masterkey.length, "AES");
+                Cipher cipher = Cipher.getInstance("AES/ECB/PKCS5Padding");
+                cipher.init(Cipher.DECRYPT_MODE, masterkey_enc);
+                byte[] privkeyGeheim = Base64.decode(privkey_user_enc, Base64.DEFAULT);
+                byte[] privKey = cipher.doFinal(privkeyGeheim);
+                String pKStr = new String(privKey, StandardCharsets.UTF_8);
+
+                Storage.setPrivkey(privKey);
 
             }
             else

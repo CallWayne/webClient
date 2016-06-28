@@ -7,6 +7,8 @@ public class Storage {
     private static String username;
     private static String password;
     private static byte[] privkey;
+    private static byte[] salt;
+
 
     public static void setUsername(String usernameInput){
         username = usernameInput;
@@ -24,8 +26,16 @@ public class Storage {
         return password;
     }
 
+    public static void setSalt(byte[] saltInput){
+        salt = saltInput;
+    }
+
+    public static byte[] getSalt(){
+        return salt;
+    }
+
     public static void setPrivkey(byte[] privkeyInput){
-        privkey = privkeyInput;
+        salt = privkeyInput;
     }
 
     public static byte[] getPrivkey(){
