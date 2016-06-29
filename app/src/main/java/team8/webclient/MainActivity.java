@@ -9,9 +9,7 @@ import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
-import android.widget.TextView;
 import android.widget.Toast;
-
 import org.apache.http.HttpResponse;
 import org.apache.http.NameValuePair;
 import org.apache.http.client.HttpClient;
@@ -23,45 +21,30 @@ import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.client.DefaultHttpClient;
 import org.apache.http.message.BasicNameValuePair;
 import org.json.JSONArray;
-import org.json.JSONException;
 import org.json.JSONObject;
-
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.security.InvalidKeyException;
-import java.security.Key;
 import java.security.KeyFactory;
-import java.security.KeyPair;
-import java.security.KeyPairGenerator;
 import java.security.NoSuchAlgorithmException;
 import java.security.PrivateKey;
 import java.security.PublicKey;
 import java.security.SecureRandom;
 import java.security.Signature;
 import java.security.SignatureException;
-import java.security.interfaces.RSAPublicKey;
 import java.security.spec.EncodedKeySpec;
 import java.security.spec.InvalidKeySpecException;
-import java.security.spec.KeySpec;
 import java.security.spec.PKCS8EncodedKeySpec;
-import java.security.spec.RSAPublicKeySpec;
 import java.security.spec.X509EncodedKeySpec;
-import java.sql.Timestamp;
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Date;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.Random;
-
 import javax.crypto.Cipher;
 import javax.crypto.KeyGenerator;
 import javax.crypto.SecretKey;
-import javax.crypto.SecretKeyFactory;
 import javax.crypto.spec.IvParameterSpec;
-import javax.crypto.spec.PBEKeySpec;
 import javax.crypto.spec.SecretKeySpec;
 
 public class MainActivity extends AppCompatActivity {
@@ -86,6 +69,7 @@ public class MainActivity extends AppCompatActivity {
         sendRecipient = (EditText) findViewById(R.id.editText_sendRecipient);
         btn_logout = (Button) findViewById(R.id.button_logout);
 
+        //wenn der Button Logout gedrückt wird
         btn_logout.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -96,6 +80,7 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
+        //wenn der Button Senden gedrückt wird
         btn_send.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -104,6 +89,7 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
+        //wenn der Button Empfangen gedrückt wird
         btn_receive.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -112,6 +98,7 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
+        //wenn der Button Löschen gedrückt wird
         btn_delete.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -121,6 +108,7 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
+    //Methode zum Löschen des Users
     public static String POSTdeleteAccount(String url) {
         InputStream inputStream = null;
         String result = "";
@@ -145,25 +133,20 @@ public class MainActivity extends AppCompatActivity {
         return result;
     }
 
+    //Methode zum abholen des PublicKeys
     public static String getPubKey(String url) {
         InputStream inputStream = null;
         String result = "";
         try {
 
-            // 1. create HttpClient
             HttpClient httpclient = new DefaultHttpClient();
 
-            // 2. make POST request to the given URL
             HttpGet httpGet = new HttpGet(url);
 
-            // 8. Execute POST request to the given URL
             HttpResponse httpResponse = httpclient.execute(httpGet);
 
-            // 9. receive response as inputStream
             inputStream = httpResponse.getEntity().getContent();
 
-
-            // 10. convert inputstream to string
             if (inputStream != null){
                 result = convertInputStreamToString(inputStream);
                 JSONObject reader = new JSONObject(result);
@@ -176,10 +159,10 @@ public class MainActivity extends AppCompatActivity {
             Log.d("InputStream", e.getLocalizedMessage());
         }
 
-        // 11. return result
         return result;
     }
 
+    //Methode zum Empfangen von Nachrichten
     public static String GETMessage(String url) throws NoSuchAlgorithmException, InvalidKeySpecException, InvalidKeyException, SignatureException {
         ArrayList<Message> msg= new ArrayList<Message>();
         InputStream inputStream = null;
@@ -188,18 +171,23 @@ public class MainActivity extends AppCompatActivity {
             url += "?";
             List<NameValuePair> params = new LinkedList<NameValuePair>();
 
+            //Unix Timestamp erzeugen
             long unixTime = System.currentTimeMillis() / 1000L;
             String strTime = Long.toString(unixTime);
 
+            //Username vom eingeloggten User besorgen
             String username = Storage.getUsername();
 
+            //Timestamp und Username an die URL als Parameter hinzufügen
             params.add(new BasicNameValuePair("timestamp", strTime));
             params.add(new BasicNameValuePair("login", username));
 
+            //PrivateKey wiederherstellen
             EncodedKeySpec privateKeySpec = new PKCS8EncodedKeySpec(Storage.getPrivkey());
             KeyFactory generator = KeyFactory.getInstance("RSA");
             PrivateKey privateKey = generator.generatePrivate(privateKeySpec);
 
+            //Digitale Signatur sig_service erstellen
             Signature sig = Signature.getInstance("SHA256withRSA");
             sig.initSign(privateKey);
             String Umschlag = new String(strTime+username);
@@ -207,6 +195,7 @@ public class MainActivity extends AppCompatActivity {
             byte[] sig_service = sig.sign();
             String sig_serviceString = Base64.encodeToString(sig_service, Base64.DEFAULT);
 
+            //Sig_service an die URL als Parameter hinzufügen
             params.add(new BasicNameValuePair("sig_service", sig_serviceString));
 
             String paramString = URLEncodedUtils.format(params, "utf-8");
@@ -214,20 +203,15 @@ public class MainActivity extends AppCompatActivity {
             url += paramString;
         try {
 
-            // 1. create HttpClient
             HttpClient httpclient = new DefaultHttpClient();
 
-            // 2. make POST request to the given URL
             HttpGet httpGet = new HttpGet(url);
 
-            // 8. Execute POST request to the given URL
             HttpResponse httpResponse = httpclient.execute(httpGet);
 
-            // 9. receive response as inputStream
             inputStream = httpResponse.getEntity().getContent();
 
-
-            // 10. convert inputstream to string
+            //JSON Objekt empfangen und auslesen und in einem Message Objekt speichern
             if (inputStream != null){
                 result = convertInputStreamToString(inputStream);
                 JSONArray reader = new JSONArray(result);
@@ -241,6 +225,8 @@ public class MainActivity extends AppCompatActivity {
                     Message message1 = new Message(sender, content_enc, iv, key_recipient_enc, sig_recipient, created_at);
                     msg.add(message1);
                 }
+
+                //einzelne Message Objekte auslesen und entschlüsseln
                 for(int i = 0; msg.size()>i; i++){
                     Message message2= msg.get(i);
                     byte[] sender = message2.getSender();
@@ -256,34 +242,40 @@ public class MainActivity extends AppCompatActivity {
                     //Pubkey erstellen als Key
                     PublicKey masterkey = KeyFactory.getInstance("RSA").generatePublic(new X509EncodedKeySpec(pubKeyByte));
 
+                    //Signaur des Empfängers
                     byte[] sig_recipient = message2.getSig_recipient();
-
                     String digiSignature = new String(senderString + Base64.encodeToString(content_enc, Base64.DEFAULT) + Base64.encodeToString(iv, Base64.DEFAULT) + Base64.encodeToString(key_recipient_enc, Base64.DEFAULT));
 
+                    //Signatur aus masterkey erstellen
                     Signature s1 = Signature.getInstance("SHA256withRSA");
                     s1.initVerify(masterkey);
                     s1.update(digiSignature.getBytes());
 
+                    //Signatur prüfen
                     if(s1.verify(sig_recipient)){
+                        //PrivateKey herstellen
                         EncodedKeySpec privateKeySpec1 = new PKCS8EncodedKeySpec(Storage.getPrivkey());
                         KeyFactory generator1 = KeyFactory.getInstance("RSA");
                         PrivateKey privateKey1 = generator1.generatePrivate(privateKeySpec1);
+
+                        //key_recipient_enc mit dem PrivateKey entschlüssen
                         Cipher cipher1 = Cipher.getInstance("RSA");
                         cipher1.init(Cipher.DECRYPT_MODE, privateKey1);
                         byte[] key_recipient = cipher1.doFinal(key_recipient_enc);
 
+                        //ivSpec erstellen
                         IvParameterSpec ivSpec = new IvParameterSpec(iv);
 
+                        //key_recipient_enc erstellen
                         SecretKey key_recipient_enc1 = new SecretKeySpec(key_recipient, 0, key_recipient.length, "AES");
+
+                        //content_enc mit key_recipient und ivSpec entschlüssen
                         Cipher cipher2 = Cipher.getInstance("AES/CBC/PKCS5Padding");
                         cipher2.init(Cipher.DECRYPT_MODE, key_recipient_enc1, ivSpec);
                         byte[] clearTextByte = cipher2.doFinal(content_enc);
                         String nachricht = new String(clearTextByte);
                         Storage.setNachrichten(nachricht);
-
-
                     }
-
                 }
             }
             else
@@ -292,11 +284,10 @@ public class MainActivity extends AppCompatActivity {
         } catch (Exception e) {
             Log.d("InputStream", e.getLocalizedMessage());
         }
-
-        // 11. return result
         return null;
     }
 
+    //Methode für das versenden von Nachrichten
     public static String POSTMessage(String posturl, String postmsg, String postrecipient) {
         String url = posturl;
         String msg = postmsg;
@@ -307,25 +298,23 @@ public class MainActivity extends AppCompatActivity {
         String result = "";
         try {
 
-            // 1. create HttpClient
             HttpClient httpclient = new DefaultHttpClient();
 
-            // 2. make POST request to the given URL
             HttpPost httpPost = new HttpPost(url);
-
 
             String json = "";
 
+            //Inhalt der Nachricht abrufen
             byte[] nachricht = msg.getBytes();
+
+            //PublicKey vom Empfänger abholen
             String pubKey = getPubKey("http://10.0.2.2:3000/" + recipient + "/pubkey");
-
             byte[] pubKeyByte = Base64.decode(pubKey, Base64.DEFAULT);
-
 
             //KeyPair bilden
             KeyGenerator kg = null;
 
-            //KeyPairGenerator erzeugen --> Algorithmus: RSA 2048
+            //KeyPairGenerator erzeugen
             kg = KeyGenerator.getInstance("AES");
             SecureRandom securerandom = new SecureRandom();
             byte bytes[] = new byte[20];
@@ -362,7 +351,6 @@ public class MainActivity extends AppCompatActivity {
             EncodedKeySpec privateKeySpec = new PKCS8EncodedKeySpec(Storage.getPrivkey());
             KeyFactory generator = KeyFactory.getInstance("RSA");
             PrivateKey privateKey = generator.generatePrivate(privateKeySpec);
-
             Signature sig = Signature.getInstance("SHA256withRSA");
             sig.initSign(privateKey);
             String innererUmschlag = new String(username + content_encString + ivString + key_recipient_encString);
@@ -383,7 +371,7 @@ public class MainActivity extends AppCompatActivity {
             byte[] sig_service = sig.sign();
             String sig_serviceString = Base64.encodeToString(sig_service, Base64.DEFAULT);
 
-            // 3. build jsonObject
+            //JSON Object zusammenbauen
             JSONObject jsonObject = new JSONObject();
             jsonObject.accumulate("login", username);
             jsonObject.accumulate("content_enc", content_encString);
@@ -394,28 +382,19 @@ public class MainActivity extends AppCompatActivity {
             jsonObject.accumulate("recipient", recipient);
             jsonObject.accumulate("timestamp", strTime);
 
-
-            // 4. convert JSONObject to JSON to String
             json = jsonObject.toString();
 
-
-            // 5. set json to StringEntity
             StringEntity se = new StringEntity(json);
 
-            // 6. set httpPost Entity
             httpPost.setEntity(se);
 
-            // 7. Set some headers to inform server about the type of the content
             httpPost.setHeader("Accept", "application/json");
             httpPost.setHeader("Content-type", "application/json");
 
-            // 8. Execute POST request to the given URL
             HttpResponse httpResponse = httpclient.execute(httpPost);
 
-            // 9. receive response as inputStream
             inputStream = httpResponse.getEntity().getContent();
 
-            // 10. convert inputstream to string
             if (inputStream != null)
                 result = convertInputStreamToString(inputStream);
             else
@@ -424,8 +403,6 @@ public class MainActivity extends AppCompatActivity {
         } catch (Exception e) {
             Log.d("InputStream", e.getLocalizedMessage());
         }
-
-        // 11. return result
         return result;
     }
 
@@ -440,6 +417,7 @@ public class MainActivity extends AppCompatActivity {
 
     }
 
+    //AsyncTask für das Löschen des User
     private class DeleteAsyncTask extends AsyncTask<String, Void, String> {
         @Override
         protected String doInBackground(String... params) {
@@ -454,6 +432,7 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    //AsyncTask fürs Empfangen
     private class ReceiveAsyncTask extends AsyncTask<String, Void, String> {
         @Override
         protected String doInBackground(String... params) {
@@ -485,6 +464,7 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    //AsyncTask fürs Versenden
     private class SendAsyncTask extends AsyncTask<String, Void, String> {
         @Override
         protected String doInBackground(String... params) {

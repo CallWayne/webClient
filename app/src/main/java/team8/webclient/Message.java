@@ -1,10 +1,6 @@
 package team8.webclient;
 
-import java.util.ArrayList;
-
-/**
- * Created by niklasschluter on 29.06.16.
- */
+//Klasse für das zwischenspeichern von den entschlüsselten Nachrichten
 public class Message {
 
     byte[] sender;
@@ -22,7 +18,6 @@ public class Message {
         this.sig_recipient = sig_recipient;
         this.created_at = created_at;
     }
-
 
     public byte[] getSender(){
         return sender;

@@ -1,11 +1,8 @@
 package team8.webclient;
 
-import java.lang.reflect.Array;
 import java.util.ArrayList;
 
-/**
- * Created by niklasschluter on 20.06.16.
- */
+//Klasse für das Zwischenspeichern von verschiedenen Sachen
 public class Storage {
     private static String username;
     private static String password;
@@ -15,7 +12,6 @@ public class Storage {
     private static byte[] salt;
 
     private static ArrayList<String> nachrichten = new ArrayList<String>();
-
 
     public static void setNachrichten(String nachricht){
         nachrichten.add(nachricht);
@@ -45,14 +41,6 @@ public class Storage {
         return password;
     }
 
-    public static void setSalt(byte[] saltInput){
-        salt = saltInput;
-    }
-
-    public static byte[] getSalt(){
-        return salt;
-    }
-
     public static void setPrivkey(byte[] privkeyInput){
         privkey = privkeyInput;
     }
@@ -64,17 +52,4 @@ public class Storage {
     public static void setPubkey(String pubkeyInput){
         pubkey = pubkeyInput;
     }
-
-    public static String getPubkey(){
-        return pubkey;
-    }
-
-    public static void setPubkey1(byte[] pubkeyInput){
-        pubkey1 = pubkeyInput;
-    }
-
-    public static byte[] getPubkey1(){
-        return pubkey1;
-    }
-
 }
