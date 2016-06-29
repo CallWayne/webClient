@@ -22,4 +22,11 @@ public class ChatActivity extends AppCompatActivity {
 
         list.setAdapter(arrayAdapter);
     }
+
+    protected void onDestroy() {
+        super.onDestroy();
+        Storage.deleteNachrichten();
+    }
+
 }
+

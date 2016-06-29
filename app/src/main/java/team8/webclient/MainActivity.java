@@ -473,9 +473,15 @@ public class MainActivity extends AppCompatActivity {
 
         @Override
         protected void onPostExecute(String result) {
-            Toast.makeText(getBaseContext(), "Data Receive!", Toast.LENGTH_LONG).show();
-            Intent intent = new Intent(getBaseContext(), ChatActivity.class);
-            startActivity(intent);
+            if(result == "Did not work!"){
+                Toast.makeText(getBaseContext(), "Keine Nachrichten die letzen 5 Minuten", Toast.LENGTH_LONG).show();
+            }
+            else{
+                Toast.makeText(getBaseContext(), "Data Receive!", Toast.LENGTH_LONG).show();
+                Intent intent = new Intent(getBaseContext(), ChatActivity.class);
+                startActivity(intent);
+            }
+
         }
     }
 
