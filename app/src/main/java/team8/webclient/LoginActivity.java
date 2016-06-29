@@ -14,6 +14,7 @@ import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.security.Key;
 import java.security.spec.KeySpec;
+import java.util.Arrays;
 
 import org.apache.http.HttpResponse;
 import org.apache.http.client.HttpClient;
@@ -44,7 +45,7 @@ public class LoginActivity extends AppCompatActivity {
     String username;
     Button btn_login;
     Button btn_tosignup;
-    TextView answer;
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -54,7 +55,6 @@ public class LoginActivity extends AppCompatActivity {
         login = (EditText) findViewById(R.id.editText_login);
         password = (EditText) findViewById(R.id.editText_loginPassword);
         username = String.valueOf(login.getText());
-        answer = (TextView) findViewById(R.id.textView_login);
         btn_login = (Button) findViewById(R.id.button_login);
         btn_tosignup = (Button) findViewById(R.id.button_tosignup);
         btn_login.setOnClickListener(new View.OnClickListener(){
@@ -90,6 +90,7 @@ public class LoginActivity extends AppCompatActivity {
             // make GET request to the given URL
             HttpResponse httpResponse = httpclient.execute(new HttpGet(url));
 
+
             // receive response as inputStream
             inputStream = httpResponse.getEntity().getContent();
 
@@ -100,26 +101,11 @@ public class LoginActivity extends AppCompatActivity {
                 //JSonObject Reader erstellen und die Daten extrahieren
                 JSONObject reader = new JSONObject(result);
                 String salt_masterkeyString = reader.getString("salt_masterkey");
+                byte[] salt_masterkey = Base64.decode(salt_masterkeyString, Base64.DEFAULT);
                 String privkey_user_encString = reader.getString("privkey_user_enc");
                 String pubkey_userString = reader.getString("pubkey_user");
-                byte[] salt_masterkey = Storage.getSalt();
                 byte[] privkey_user_enc = privkey_user_encString.getBytes();
-                String privkey_user_encStr = new String(privkey_user_enc, StandardCharsets.UTF_8);
-                byte[] pubkey_user = pubkey_userString.getBytes();
 
-                /*SecretKeyFactory kf = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA1");
-                KeySpec specs = new PBEKeySpec(password, salt_masterkey, 10000, 256);
-                SecretKey key = kf.generateSecret(specs);
-                byte[] masterkey = key.getEncoded();
-
-                SecretKey masterkey_enc = new SecretKeySpec(masterkey, 0, masterkey.length, "AES");
-
-                byte[] privkey_user_encByte = android.util.Base64.decode(privkey_user_encStr, android.util.Base64.DEFAULT);
-                byte[] decrypted = null;
-                Cipher cipher = Cipher.getInstance("AES/ECB/PKCS5Padding");
-                cipher.init(Cipher.DECRYPT_MODE, masterkey_enc);
-                decrypted = cipher.doFinal(privkey_user_encByte);
-*/
                 SecretKeyFactory kf = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA1");
                 KeySpec specs = new PBEKeySpec(password, salt_masterkey, 10000, 256);
                 SecretKey key = kf.generateSecret(specs);
@@ -130,9 +116,8 @@ public class LoginActivity extends AppCompatActivity {
                 cipher.init(Cipher.DECRYPT_MODE, masterkey_enc);
                 byte[] privkeyGeheim = Base64.decode(privkey_user_enc, Base64.DEFAULT);
                 byte[] privKey = cipher.doFinal(privkeyGeheim);
-                String pKStr = new String(privKey, StandardCharsets.UTF_8);
-
                 Storage.setPrivkey(privKey);
+                Storage.setPubkey(pubkey_userString);
 
             }
             else
@@ -169,8 +154,7 @@ public class LoginActivity extends AppCompatActivity {
                     Toast.makeText(getBaseContext(), "The user don't exists, please signup!", Toast.LENGTH_LONG).show();
                 }
                 else{
-                    Toast.makeText(getBaseContext(), "Received!", Toast.LENGTH_LONG).show();
-                    answer.setText(result);
+                    Toast.makeText(getBaseContext(), "Login succesfull!", Toast.LENGTH_LONG).show();
                     Intent intent = new Intent(getBaseContext(), MainActivity.class);
                     startActivity(intent);
                 }

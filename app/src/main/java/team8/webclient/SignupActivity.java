@@ -48,6 +48,7 @@ import org.spongycastle.openssl.jcajce.JcaPEMWriter;
 
 import java.io.StringWriter;
 import java.security.*;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -120,13 +121,12 @@ public class SignupActivity extends AppCompatActivity {
             String json = "";
 
             //salt_masterkey bilden
-
-            byte[] salt_masterkey = SecureRandom.getSeed(64);
-            Storage.setSalt(salt_masterkey);
-            String saltString = new String(salt_masterkey, StandardCharsets.UTF_8);
-
+            SecureRandom sr = SecureRandom.getInstance("SHA1PRNG");
+            byte[] salt = new byte[64];
+            sr.nextBytes(salt);
+            String saltString = Base64.encodeToString(salt, Base64.DEFAULT);
             SecretKeyFactory kf = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA1");
-            KeySpec specs = new PBEKeySpec(password, salt_masterkey, 10000, 256);
+            KeySpec specs = new PBEKeySpec(password, salt, 10000, 256);
             SecretKey key = kf.generateSecret(specs);
             byte[] masterkey = key.getEncoded();
 
@@ -138,23 +138,28 @@ public class SignupActivity extends AppCompatActivity {
             kpg.initialize(2048);
             KeyPair kp = kpg.genKeyPair();
             Key publicKey = kp.getPublic();
+            byte[] pubKeyByte = publicKey.getEncoded();
+            System.out.println(Arrays.toString(pubKeyByte));
+            String pubKeyString =  Base64.encodeToString(pubKeyByte, Base64.DEFAULT);
             Key privateKey = kp.getPrivate();
+            byte [] privKeyByte = privateKey.getEncoded();
+            System.out.println("PrivKey"+Arrays.toString(privKeyByte));
+
 
             //generate privkey_user_enc
             SecretKey masterkey_enc = new SecretKeySpec(masterkey, 0, masterkey.length, "AES");
             Cipher cipher = Cipher.getInstance("AES/ECB/PKCS5Padding");
             cipher.init(Cipher.ENCRYPT_MODE, masterkey_enc);
             byte [] privkey_user_enc = cipher.doFinal(privateKey.getEncoded());
-            byte [] encrypted =  Base64.encode(privkey_user_enc, Base64.DEFAULT);
+            String privkeyGeheim =  Base64.encodeToString(privkey_user_enc, Base64.DEFAULT);
 
-            String privkeyGeheim = new String(encrypted, StandardCharsets.UTF_8);
 
 
             // 3. build jsonObject
             JSONObject jsonObject = new JSONObject();
             jsonObject.accumulate("login", username);
             jsonObject.accumulate("salt_masterkey", saltString);
-            jsonObject.accumulate("pubkey_user", publicKey);
+            jsonObject.accumulate("pubkey_user", pubKeyString);
             jsonObject.accumulate("privkey_user_enc", privkeyGeheim);
 
 
